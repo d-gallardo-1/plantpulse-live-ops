@@ -85,7 +85,8 @@ export function MatrixExplorer({ rules, stations, activeCodes, matrixSource, loa
 
       {loadError && (
         <p role="alert" className="rounded-md border border-warn/50 bg-warn/10 px-3 py-2 text-sm text-warn">
-          Could not load the matrix from the backend ({loadError}). Retrying automatically
+          Could not load the matrix from the backend ({loadError}). It is retried automatically
+          while the live connection is up
           {rules.length > 0 ? '; the rules below are the last ones loaded and may be out of date.' : '.'}
         </p>
       )}

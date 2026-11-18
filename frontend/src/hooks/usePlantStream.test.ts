@@ -17,6 +17,15 @@ afterEach(() => {
 
 const advance = (ms: number) => act(() => vi.advanceTimersByTime(ms));
 
+describe('stream timing', () => {
+  it('waits longer than the backend heartbeat before calling a connection dead', () => {
+    // The backend sends something at least every 5 s (heartbeat_seconds in sse.py).
+    expect(STALE_MS).toBe(8000);
+    expect(STALE_MS).toBeGreaterThan(5000);
+    expect(RETRY_MS).toBe(3000);
+  });
+});
+
 describe('usePlantStream', () => {
   it('starts reconnecting with no snapshot and subscribes to the stream endpoint', () => {
     const { result } = renderHook(() => usePlantStream());

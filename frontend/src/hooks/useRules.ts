@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api';
 import type { CauseEffectRule, StreamStatus } from '../types/telemetry';
 
@@ -27,33 +27,44 @@ export interface RulesState {
 export function useRules(streamStatus: StreamStatus, revision: number | null): RulesState {
   const [rules, setRules] = useState<CauseEffectRule[]>([]);
   const [loadedRevision, setLoadedRevision] = useState<number | null>(null);
-  const [attempt, setAttempt] = useState(0);
+  const [retryTick, setRetryTick] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Consecutive failures for one revision. Kept in a ref, not in state: starting
+  // over for a new revision must not trigger a second, redundant request.
+  const failures = useRef<{ revision: number | null; count: number }>({ revision: null, count: 0 });
   const upToDate = revision !== null && loadedRevision === revision;
 
   useEffect(() => {
-    if (upToDate || revision === null || streamStatus !== 'CONNECTED') return;
+    if (streamStatus !== 'CONNECTED') {
+      failures.current.count = 0; // a new connection starts with the short delay again
+      return;
+    }
+    if (upToDate || revision === null) return;
+    if (failures.current.revision !== revision) failures.current = { revision, count: 0 };
+
     let cancelled = false;
     let retryTimer: number | undefined;
     api
       .matrix()
       .then((response) => {
         if (cancelled) return;
+        failures.current.count = 0;
         setRules(response.rules);
         setLoadedRevision(revision);
         setLoadError(null);
-        setAttempt(0);
       })
       .catch((cause: unknown) => {
         if (cancelled) return;
         setLoadError(cause instanceof Error ? cause.message : 'unknown error');
-        retryTimer = window.setTimeout(() => setAttempt((count) => count + 1), retryDelay(attempt));
+        const delay = retryDelay(failures.current.count);
+        failures.current.count += 1;
+        retryTimer = window.setTimeout(() => setRetryTick((tick) => tick + 1), delay);
       });
     return () => {
       cancelled = true;
       window.clearTimeout(retryTimer);
     };
-  }, [upToDate, revision, streamStatus, attempt]);
+  }, [upToDate, revision, streamStatus, retryTick]);
 
   return { rules, loadError };
 }
