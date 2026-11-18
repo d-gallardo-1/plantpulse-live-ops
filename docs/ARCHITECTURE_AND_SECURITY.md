@@ -27,7 +27,8 @@ them.
 
 1. At startup the synthetic rules are written to an in-memory Excel workbook and parsed
    back. The rules the API serves are therefore the result of spreadsheet ingestion.
-2. A background task advances the simulation every two seconds and publishes a snapshot.
+2. A background task advances the simulation at a fixed period (two seconds by default,
+   set with `PLANTPULSE_TICK_SECONDS`) and publishes a snapshot.
 3. A command such as `POST /simulate/trigger/ALM-207` mutates the engine and publishes
    immediately, so the change reaches every client without waiting for the next tick.
 4. Acknowledging an alarm records the time and changes how it is shown. It does not

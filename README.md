@@ -99,7 +99,8 @@ Then open <http://127.0.0.1:8080>.
 
 ### Without Docker
 
-Requires Python 3.11+ and Node.js 20.19+.
+Requires Python 3.13+ and Node.js 20.19+. Python 3.13 is the version used by the
+container image and by CI; the start scripts check it before doing anything else.
 
 ```powershell
 # Windows. Unsigned scripts are blocked by default, so the policy is relaxed
@@ -169,7 +170,8 @@ curl -N "http://127.0.0.1:8080/api/v1/stream?max_events=3"
 
 ## Repository layout
 
-Orchestrator modules compose small, single-purpose modules. No source file exceeds 200 lines.
+Orchestrator modules compose small, single-purpose modules. Source files are limited to
+200 lines, and CI enforces it with `scripts/check_file_length.py`.
 
 ```text
 backend/app/
@@ -190,7 +192,8 @@ frontend/src/
   lib/                 api, search, statusMeta
 docs/ARCHITECTURE_AND_SECURITY.md
 docker-compose.yml, run_local.ps1, run_local.sh
-.github/workflows/ci.yml   backend tests + frontend type check and build
+scripts/check_file_length.py   keeps every source file within 200 lines
+.github/workflows/ci.yml   file length check, backend tests, frontend type check and build
 ```
 
 ## Tests
@@ -208,7 +211,8 @@ npm ci
 npm run build    # type check + production build
 ```
 
-Parse the sample spreadsheet from the command line:
+Generate the sample spreadsheet and parse it from the command line. The command writes
+`sample.xlsx` itself (from the built-in dataset) and then prints the rules it read back:
 
 ```bash
 cd backend

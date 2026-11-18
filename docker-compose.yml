@@ -10,16 +10,8 @@ services:
     # Not published to the host: only the frontend proxy can reach it.
     expose:
       - "8000"
-    healthcheck:
-      test:
-        - CMD
-        - python
-        - -c
-        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=2)"
-      interval: 10s
-      timeout: 3s
-      start_period: 5s
-      retries: 5
+    # The health check is defined once, in backend/Dockerfile (HEALTHCHECK).
+    # The frontend below waits for it through "condition: service_healthy".
     read_only: true
     cap_drop:
       - ALL

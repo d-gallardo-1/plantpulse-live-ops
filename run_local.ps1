@@ -1,5 +1,5 @@
 # Starts PlantPulse without Docker (Windows PowerShell 5.1 or later).
-# Requires Python 3.11+ and Node.js 20.19+ on PATH.
+# Requires Python 3.13+ and Node.js 20.19+ on PATH.
 # Backend: http://127.0.0.1:8000   UI: http://127.0.0.1:5173
 
 $ErrorActionPreference = 'Stop'
@@ -12,11 +12,22 @@ foreach ($tool in 'python', 'npm') {
         throw "$tool was not found on PATH. Install it and run this script again."
     }
 }
+python -c "import sys; sys.exit(sys.version_info < (3, 13))"
+if ($LASTEXITCODE -ne 0) { throw "Python 3.13+ is required; found $(python --version 2>&1)." }
 
-$venvPython = Join-Path $backend '.venv\Scripts\python.exe'
-if (-not (Test-Path $venvPython)) {
+# "Does pip work" rather than "does the folder exist": a half-built environment
+# left by an interrupted run is rebuilt instead of being kept forever.
+$venvDir = Join-Path $backend '.venv'
+$venvPython = Join-Path $venvDir 'Scripts\python.exe'
+$venvReady = $false
+if (Test-Path $venvPython) {
+    & $venvPython -m pip --version *> $null
+    $venvReady = ($LASTEXITCODE -eq 0)
+}
+if (-not $venvReady) {
     Write-Host 'Creating Python virtual environment...'
-    python -m venv (Join-Path $backend '.venv')
+    if (Test-Path $venvDir) { Remove-Item -Recurse -Force $venvDir }
+    python -m venv $venvDir
     if ($LASTEXITCODE -ne 0) { throw 'Could not create the virtual environment.' }
 }
 
@@ -24,7 +35,19 @@ Write-Host 'Installing backend dependencies...'
 & $venvPython -m pip install --quiet --disable-pip-version-check -r (Join-Path $backend 'requirements.txt')
 if ($LASTEXITCODE -ne 0) { throw 'Backend dependency installation failed.' }
 
+# If something already listens on port 8000, the health check below could be
+# answered by that other program, so refuse to start instead.
+$probe = New-Object System.Net.Sockets.TcpClient
+try {
+    $probe.Connect('127.0.0.1', 8000)
+    $portInUse = $true
+}
+catch { $portInUse = $false }
+finally { $probe.Close() }
+if ($portInUse) { throw 'Port 8000 is already in use. Stop the program using it and run this script again.' }
+
 Write-Host 'Starting backend on http://127.0.0.1:8000 ...'
+# One worker only: plant state lives in memory and must be shared by all clients.
 $apiArgs = @(
     '-m', 'uvicorn', 'app.main:app',
     '--host', '127.0.0.1', '--port', '8000',
@@ -34,19 +57,40 @@ $api = Start-Process -FilePath $venvPython -ArgumentList $apiArgs `
     -WorkingDirectory $backend -PassThru -NoNewWindow
 
 try {
-    Push-Location $frontend
-    if (-not (Test-Path 'node_modules')) {
-        Write-Host 'Installing frontend dependencies...'
-        npm ci --no-fund --no-audit
-        if ($LASTEXITCODE -ne 0) { throw 'Frontend dependency installation failed.' }
+    # Fail fast if the backend did not come up (most often: port 8000 is in use).
+    # Checking the process as well as the port avoids mistaking another program
+    # that already answers on port 8000 for this backend.
+    $healthy = $false
+    foreach ($attempt in 1..30) {
+        if ($api.HasExited) {
+            throw 'The backend stopped during start-up. Is port 8000 already in use?'
+        }
+        try {
+            $response = Invoke-WebRequest -UseBasicParsing -TimeoutSec 1 'http://127.0.0.1:8000/api/v1/health'
+            if ($response.StatusCode -eq 200) { $healthy = $true; break }
+        }
+        catch { }
+        Start-Sleep -Milliseconds 500
     }
-    Write-Host ''
-    Write-Host 'Open http://127.0.0.1:5173 in your browser. Press Ctrl+C to stop.'
-    Write-Host ''
-    npm run dev
+    if (-not $healthy) { throw 'The backend did not answer on http://127.0.0.1:8000 within 15 seconds.' }
+
+    Push-Location $frontend
+    try {
+        if (-not (Test-Path 'node_modules')) {
+            Write-Host 'Installing frontend dependencies...'
+            npm ci --no-fund --no-audit
+            if ($LASTEXITCODE -ne 0) { throw 'Frontend dependency installation failed.' }
+        }
+        Write-Host ''
+        Write-Host 'Open http://127.0.0.1:5173 in your browser. Press Ctrl+C to stop.'
+        Write-Host ''
+        npm run dev
+    }
+    finally {
+        Pop-Location
+    }
 }
 finally {
-    Pop-Location
     if ($api -and -not $api.HasExited) {
         # /T also stops the interpreter started by the virtual environment launcher.
         taskkill /PID $api.Id /T /F | Out-Null
