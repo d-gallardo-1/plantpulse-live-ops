@@ -116,7 +116,7 @@ export function MatrixToolbar({ matrixSource, pending, run }: Props) {
           className={`rounded border px-2 py-1.5 text-xs ${
             notice.ok
               ? 'border-nominal/50 bg-nominal/10 text-nominal'
-              : 'border-critical/50 bg-critical/10 text-critical'
+              : 'border-critical/50 bg-critical/10 text-red-400'
           }`}
         >
           {notice.text}

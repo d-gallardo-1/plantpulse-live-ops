@@ -35,7 +35,7 @@ export function NetworkWatchdog({ nodes, history }: Props) {
           “Reset All Faults” on the Live Operations view restores every node.
         </p>
         {error && (
-          <p role="alert" className="w-full rounded border border-critical/50 bg-critical/10 px-2 py-1.5 text-xs text-critical">
+          <p role="alert" className="w-full rounded border border-critical/50 bg-critical/10 px-2 py-1.5 text-xs text-red-400">
             Command failed: {error}
           </p>
         )}

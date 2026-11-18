@@ -47,7 +47,7 @@ export function NodeCard({ node, history, pending, onOverride }: Props) {
         </div>
         <div>
           <dt className="text-slate-400">Latency</dt>
-          <dd className={`font-mono ${node.latency_ms === null ? 'text-critical' : 'text-slate-100'}`}>
+          <dd className={`font-mono ${node.latency_ms === null ? 'text-red-400' : 'text-slate-100'}`}>
             {node.latency_ms === null ? 'timeout' : `${node.latency_ms.toFixed(1)} ms`}
           </dd>
         </div>

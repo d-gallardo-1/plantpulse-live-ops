@@ -106,7 +106,7 @@ export function DemoControls({ autoCycle, rules, activeCodes, pending, error, ru
       </button>
 
       {error && (
-        <p role="alert" className="mt-2 rounded border border-critical/50 bg-critical/10 px-2 py-1.5 text-xs text-critical">
+        <p role="alert" className="mt-2 rounded border border-critical/50 bg-critical/10 px-2 py-1.5 text-xs text-red-400">
           Command failed: {error}
         </p>
       )}

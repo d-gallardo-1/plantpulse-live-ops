@@ -19,7 +19,7 @@ export const TONE_CLASSES: Record<Tone, { text: string; border: string; bg: stri
   nominal: { text: 'text-nominal', border: 'border-nominal/50', bg: 'bg-nominal/10', fill: 'fill-nominal' },
   warn: { text: 'text-warn', border: 'border-warn/50', bg: 'bg-warn/10', fill: 'fill-warn' },
   high: { text: 'text-high', border: 'border-high/50', bg: 'bg-high/10', fill: 'fill-high' },
-  critical: { text: 'text-critical', border: 'border-critical/60', bg: 'bg-critical/10', fill: 'fill-critical' },
+  critical: { text: 'text-red-400', border: 'border-critical/60', bg: 'bg-critical/10', fill: 'fill-critical' },
   link: { text: 'text-link', border: 'border-link/50', bg: 'bg-link/10', fill: 'fill-link' },
 };
 

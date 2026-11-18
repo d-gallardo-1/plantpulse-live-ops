@@ -11,7 +11,7 @@ export function StatusBadge({ status, compact = false }: Props) {
   const tone = TONE_CLASSES[meta.tone];
   const Icon = meta.icon;
   const pulse = status === 'CRITICAL' ? 'motion-safe:animate-pulse' : '';
-  const size = compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-1 text-[11px]';
+  const size = compact ? 'px-1.5 py-0.5 text-[11px]' : 'px-2 py-1 text-[11px]';
 
   return (
     <span

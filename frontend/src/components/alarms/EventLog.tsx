@@ -2,7 +2,7 @@ import { formatTime } from '../../lib/api';
 import type { EventKind, PlantEvent } from '../../types/telemetry';
 
 const KIND_CLASSES: Record<EventKind, string> = {
-  RAISED: 'text-critical',
+  RAISED: 'text-red-400',
   ACKNOWLEDGED: 'text-link',
   CLEARED: 'text-nominal',
   RESET: 'text-nominal',
