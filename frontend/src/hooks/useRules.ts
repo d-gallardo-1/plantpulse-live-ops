@@ -13,10 +13,15 @@ export const RULES_RETRY_JITTER = 0.2;
  * 30 s. Each wait is varied by up to 20 % either way, so clients that failed
  * together (for example when the backend restarts) do not retry in step.
  * `random` is a number in [0, 1); 0.5 gives the nominal delay.
+ *
+ * RULES_RETRY_MAX_MS is a hard limit: the variation is applied first and the
+ * result is then capped, so no wait is ever longer than it. At the cap the
+ * waits are spread between 24 s and 30 s.
  */
 export function retryDelay(attempt: number, random: number = Math.random()): number {
   const nominal = Math.min(RULES_RETRY_MS * 2 ** attempt, RULES_RETRY_MAX_MS);
-  return Math.round(nominal * (1 - RULES_RETRY_JITTER + 2 * RULES_RETRY_JITTER * random));
+  const varied = Math.round(nominal * (1 - RULES_RETRY_JITTER + 2 * RULES_RETRY_JITTER * random));
+  return Math.min(varied, RULES_RETRY_MAX_MS);
 }
 
 export interface RulesState {

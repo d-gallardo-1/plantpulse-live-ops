@@ -23,7 +23,10 @@ beforeEach(() => {
   // 0.5 is the midpoint of the jitter range, so waits are the nominal delays.
   vi.spyOn(Math, 'random').mockReturnValue(0.5);
 });
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
 
 /** Lets resolved promises and the given amount of timer time run. */
 const settle = (ms = 0) => act(async () => void (await vi.advanceTimersByTimeAsync(ms)));
@@ -133,8 +136,33 @@ describe('useRules', () => {
     expect(RULES_RETRY_JITTER).toBe(0.2);
     expect(retryDelay(0, 0)).toBe(2400);
     expect(retryDelay(0, 1)).toBe(3600);
+  });
+
+  it('never waits longer than the cap, whatever the random draw', () => {
     expect(retryDelay(10, 0)).toBe(24000);
-    expect(retryDelay(10, 1)).toBe(36000);
+    expect(retryDelay(10, 1)).toBe(RULES_RETRY_MAX_MS);
+    expect(retryDelay(3, 1)).toBe(28800); // below the cap the full variation applies
+    for (const random of [0, 0.25, 0.5, 0.75, 0.999]) {
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        expect(retryDelay(attempt, random)).toBeLessThanOrEqual(RULES_RETRY_MAX_MS);
+      }
+    }
+  });
+
+  // 4. The hook itself must schedule the varied wait, not only the helper.
+  it('schedules its retry with the varied delay', async () => {
+    vi.mocked(Math.random).mockReturnValue(0); // shortest wait: 80 % of 3 s
+    const matrix = vi
+      .spyOn(api, 'matrix')
+      .mockRejectedValueOnce(new Error('HTTP 500'))
+      .mockResolvedValueOnce(response('Recovered'));
+    render('CONNECTED', 0);
+    await settle();
+
+    await settle(2399);
+    expect(matrix).toHaveBeenCalledTimes(1);
+    await settle(1);
+    expect(matrix).toHaveBeenCalledTimes(2);
   });
 
   it('draws a fresh random delay for each retry by default', () => {

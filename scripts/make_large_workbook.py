@@ -66,7 +66,7 @@ def _with_fixed_timestamps(data: bytes) -> bytes:
 
 
 def build() -> bytes:
-    """Return the workbook bytes; raise ValueError if they miss the size window."""
+    """Return the workbook bytes; raise ValueError if they are over the limit or too small."""
     generator = random.Random(SEED)
     workbook = load_workbook(io.BytesIO(rules_to_excel_bytes(CAUSE_EFFECT_RULES)))
     workbook.properties.created = _FIXED_TIME
@@ -79,10 +79,15 @@ def build() -> bytes:
     data = _with_fixed_timestamps(buffer.getvalue())
 
     smallest = int(MAX_UPLOAD_BYTES * MIN_SHARE_OF_LIMIT)
-    if not smallest <= len(data) < MAX_UPLOAD_BYTES:
+    if len(data) >= MAX_UPLOAD_BYTES:
         raise ValueError(
-            f"The generated workbook is {len(data)} bytes; it must be between {smallest} "
-            f"and {MAX_UPLOAD_BYTES} (the upload limit). Adjust PADDING_ROWS."
+            f"The generated workbook is too large: {len(data)} bytes, and the upload "
+            f"limit is {MAX_UPLOAD_BYTES}. Lower PADDING_ROWS."
+        )
+    if len(data) < smallest:
+        raise ValueError(
+            f"The generated workbook is too small: {len(data)} bytes, and it must be at "
+            f"least {smallest} to exercise the upload limit. Raise PADDING_ROWS."
         )
     return data
 
