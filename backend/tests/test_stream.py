@@ -69,6 +69,38 @@ def test_stream_closes_after_max_events_and_unsubscribes(engine):
     assert engine.subscriber_count == 0
 
 
+def test_every_command_reaches_stream_subscribers(client, engine):
+    """The UI learns about state changes only through the stream."""
+    queue = engine.subscribe()
+
+    def next_snapshot():
+        assert not queue.empty(), "the command did not publish a snapshot"
+        return queue.get_nowait()
+
+    client.post(f"{API}/simulate/trigger/ALM-207")
+    raised = next_snapshot()
+    assert [a.rule.alarm_code for a in raised.active_alarms] == ["ALM-207"]
+
+    client.post(f"{API}/alarms/ALM-207/acknowledge")
+    acknowledged = next_snapshot()
+    assert acknowledged.active_alarms[0].acknowledged_at is not None
+
+    client.post(f"{API}/simulate/clear/ALM-207")
+    cleared = next_snapshot()
+    assert cleared.active_alarms == []
+    assert [entry.alarm_code for entry in cleared.alarm_history] == ["ALM-207"]
+
+    client.post(f"{API}/simulate/network/GW-EDGE-01", json={"status": "OFFLINE"})
+    assert next_snapshot().kpis.gateway_latency_ms is None
+
+    client.post(f"{API}/simulate/reset")
+    assert next_snapshot().event_log[0].kind.value == "RESET"
+
+    sequences = [raised.sequence, acknowledged.sequence, cleared.sequence]
+    assert sequences == sorted(set(sequences))
+    assert queue.empty()  # one snapshot per command, no duplicates
+
+
 def test_slow_subscriber_keeps_latest_snapshot(engine):
     queue = engine.subscribe()
 
