@@ -87,8 +87,13 @@ jobs:
           curl --fail --silent --show-error -X POST --data-binary @matrix.xlsx             -H "Content-Type: application/octet-stream"             "$BASE_URL/api/v1/matrix/upload?filename=matrix.xlsx" | grep -q '"rule_count":12'
       - name: Containers do not run as root
         run: |
-          test "$(docker compose exec -T backend id -u)" != "0"
-          test "$(docker compose exec -T frontend id -u)" != "0"
+          # Assigned separately so the step fails if the command itself fails,
+          # instead of comparing an empty string against "0".
+          backend_uid="$(docker compose exec -T backend id -u)"
+          frontend_uid="$(docker compose exec -T frontend id -u)"
+          echo "backend uid=$backend_uid, frontend uid=$frontend_uid"
+          [[ "$backend_uid" =~ ^[0-9]+$ && "$backend_uid" != "0" ]]
+          [[ "$frontend_uid" =~ ^[0-9]+$ && "$frontend_uid" != "0" ]]
       - name: Show container state and logs on failure
         if: failure()
         run: |

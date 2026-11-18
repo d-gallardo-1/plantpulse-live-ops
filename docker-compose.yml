@@ -13,6 +13,10 @@ services:
     # The health check is defined once, in backend/Dockerfile (HEALTHCHECK).
     # The frontend below waits for it through "condition: service_healthy".
     read_only: true
+    # The spreadsheet library writes temporary files while it builds a workbook,
+    # so the read-only container still needs a writable, in-memory /tmp.
+    tmpfs:
+      - /tmp
     cap_drop:
       - ALL
     security_opt:

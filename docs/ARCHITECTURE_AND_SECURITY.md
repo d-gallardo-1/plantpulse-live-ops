@@ -84,7 +84,7 @@ build elsewhere and import the images, or use internal mirrors.
 | --- | --- |
 | Port bound to `127.0.0.1` only | `docker-compose.yml` |
 | Backend not published to the host | `docker-compose.yml` |
-| Containers run as non-root, read-only root filesystem, all capabilities dropped, `no-new-privileges` | `docker-compose.yml`, Dockerfiles |
+| Containers run as non-root, read-only root filesystem (in-memory `/tmp` only), all capabilities dropped, `no-new-privileges` | `docker-compose.yml`, Dockerfiles |
 | Content Security Policy, `X-Frame-Options`, `nosniff`, `Referrer-Policy` | `frontend/nginx.conf` |
 | Same-origin API through the proxy, so no CORS is enabled | `frontend/nginx.conf`, `vite.config.ts` |
 | Path and query parameters validated by pattern and length | `backend/app/api/` |
