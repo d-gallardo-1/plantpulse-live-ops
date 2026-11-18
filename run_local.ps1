@@ -21,8 +21,13 @@ $venvDir = Join-Path $backend '.venv'
 $venvPython = Join-Path $venvDir 'Scripts\python.exe'
 $venvReady = $false
 if (Test-Path $venvPython) {
+    # Windows PowerShell 5.1 turns redirected stderr of a native command into a
+    # terminating error under 'Stop'. A missing pip writes to stderr, so the
+    # preference is relaxed for this one probe and the exit code decides.
+    $ErrorActionPreference = 'SilentlyContinue'
     & $venvPython -m pip --version *> $null
     $venvReady = ($LASTEXITCODE -eq 0)
+    $ErrorActionPreference = 'Stop'
 }
 if (-not $venvReady) {
     Write-Host 'Creating Python virtual environment...'
@@ -57,22 +62,26 @@ $api = Start-Process -FilePath $venvPython -ArgumentList $apiArgs `
     -WorkingDirectory $backend -PassThru -NoNewWindow
 
 try {
-    # Fail fast if the backend did not come up (most often: port 8000 is in use).
-    # Checking the process as well as the port avoids mistaking another program
-    # that already answers on port 8000 for this backend.
+    # Fail fast if the backend did not come up. The process is checked as well as
+    # the port, and the probe ignores proxy settings: a proxy variable (often set
+    # so pip can download packages) must not hide a healthy local backend.
+    $startupSeconds = 30
+    $healthProbe = "import urllib.request; urllib.request.build_opener(urllib.request.ProxyHandler({})).open('http://127.0.0.1:8000/api/v1/health', timeout=1)"
+    $deadline = (Get-Date).AddSeconds($startupSeconds)
     $healthy = $false
-    foreach ($attempt in 1..30) {
+    while (-not $healthy -and (Get-Date) -lt $deadline) {
         if ($api.HasExited) {
-            throw 'The backend stopped during start-up. Is port 8000 already in use?'
+            throw 'The backend stopped during start-up. See its error message above.'
         }
-        try {
-            $response = Invoke-WebRequest -UseBasicParsing -TimeoutSec 1 'http://127.0.0.1:8000/api/v1/health'
-            if ($response.StatusCode -eq 200) { $healthy = $true; break }
-        }
-        catch { }
-        Start-Sleep -Milliseconds 500
+        $ErrorActionPreference = 'SilentlyContinue'
+        & $venvPython -c $healthProbe *> $null
+        $healthy = ($LASTEXITCODE -eq 0)
+        $ErrorActionPreference = 'Stop'
+        if (-not $healthy) { Start-Sleep -Milliseconds 500 }
     }
-    if (-not $healthy) { throw 'The backend did not answer on http://127.0.0.1:8000 within 15 seconds.' }
+    if (-not $healthy) {
+        throw "The backend did not answer on http://127.0.0.1:8000 within $startupSeconds seconds."
+    }
 
     Push-Location $frontend
     try {

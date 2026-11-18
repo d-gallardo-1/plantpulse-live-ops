@@ -1,8 +1,8 @@
 """Fail when a source file grows past the project's line limit.
 
 The code base is organised as orchestrator files over small modules. This check
-keeps that true instead of leaving it as a claim in the README. Run from the
-repository root:
+keeps that true instead of leaving it as a claim in the README. It locates the
+repository from its own path, so it can be run from any directory:
 
     python scripts/check_file_length.py
 """
@@ -22,6 +22,10 @@ def main() -> int:
     too_long: list[tuple[int, str]] = []
     checked = 0
     for source_root in SOURCE_ROOTS:
+        if not (root / source_root).is_dir():
+            # A renamed folder must not make the check pass by finding nothing.
+            print(f"Source folder not found: {source_root}. Update SOURCE_ROOTS.")
+            return 1
         for path in sorted((root / source_root).rglob("*")):
             if not path.is_file() or path.suffix not in SOURCE_SUFFIXES:
                 continue

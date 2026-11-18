@@ -59,23 +59,26 @@ echo "Starting backend on http://127.0.0.1:8000 ..."
 api_pid=$!
 trap 'kill "$api_pid" 2>/dev/null || true' EXIT INT TERM
 
-# Fail fast if the backend did not come up (most often: port 8000 is in use).
-# Checking the process as well as the port avoids mistaking another program
-# that already answers on port 8000 for this backend.
+# Fail fast if the backend did not come up. The process is checked as well as
+# the port, and the probe ignores proxy settings: a proxy variable (often set
+# so pip can download packages) must not hide a healthy local backend.
+startup_seconds=30
+health_probe="import urllib.request; urllib.request.build_opener(urllib.request.ProxyHandler({})).open('http://127.0.0.1:8000/api/v1/health', timeout=1)"
+deadline=$((SECONDS + startup_seconds))
 healthy=""
-for _ in $(seq 1 30); do
+while [ -z "$healthy" ] && [ "$SECONDS" -lt "$deadline" ]; do
   if ! kill -0 "$api_pid" 2>/dev/null; then
-    echo "The backend stopped during start-up. Is port 8000 already in use?" >&2
+    echo "The backend stopped during start-up. See its error message above." >&2
     exit 1
   fi
-  if "$venv_python" -c 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8000/api/v1/health", timeout=1)' 2>/dev/null; then
+  if "$venv_python" -c "$health_probe" 2>/dev/null; then
     healthy="yes"
-    break
+  else
+    sleep 0.5
   fi
-  sleep 0.5
 done
 if [ -z "$healthy" ]; then
-  echo "The backend did not answer on http://127.0.0.1:8000 within 15 seconds." >&2
+  echo "The backend did not answer on http://127.0.0.1:8000 within $startup_seconds seconds." >&2
   exit 1
 fi
 
