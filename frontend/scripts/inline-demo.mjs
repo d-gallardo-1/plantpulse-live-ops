@@ -31,11 +31,19 @@ const js = onlyAsset(/<script type="module"[^>]*src="\/?([^"]+\.js)"/g, 'script'
 const safeJs = js.replace(/<\/script/gi, '<\\/script').replace(/<!--/g, '<\\!--');
 if (/<\/style/i.test(css)) throw new Error('The stylesheet contains "</style"; it cannot be inlined.');
 
+const HOST_PROOF_BASE = [
+  ':root{color-scheme:dark;background:#090d16}',
+  'html body{background:#090d16;color:#e2e8f0;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}',
+].join('');
+
 const title = '<title>PlantPulse Live-Ops</title>';
 const body = [
   `<style>${css}</style>`,
-  // The design is dark only; say so outside any cascade layer so it always applies.
-  '<style>:root{color-scheme:dark}</style>',
+  // A host that wraps the fragment brings its own base styles for the page
+  // (light scheme, its own background, a smaller font). The application sets
+  // these inside a cascade layer, where any host rule outside a layer wins,
+  // so they are repeated here outside every layer. The design is dark only.
+  `<style>${HOST_PROOF_BASE}</style>`,
   '<div id="root"></div>',
   `<script type="module">${safeJs}</script>`,
   '',
