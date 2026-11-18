@@ -4,7 +4,7 @@
 
 **On-premises cause-and-effect diagnostics for automated production lines, streamed live to a control-room display.**
 
-<!-- TODO: Insert 15s demo GIF here (trigger ALM-207 and show the station, trace matrix and interlock update live) -->
+![PlantPulse demo: a fault is injected, the station turns critical, the alarm shows its full hardware trace, and it is acknowledged and cleared into the history](docs/demo.gif)
 
 > **Reference demo.** All telemetry is simulated and every station, tag, I/O address,
 > threshold and IP address is synthetic. The application is not connected to a PLC or to
@@ -188,12 +188,13 @@ backend/tests/         matrix, upload, read API, simulation API, alarm lifecycle
 frontend/src/
   App.tsx              orchestrator: one stream feeds every view
   components/          five view orchestrators + alarms/, matrix/, network/, top/, shared/
-  hooks/               usePlantStream, useRules, useAction
+  hooks/               usePlantStream, useRules, useAction, useLatencyHistory
+  test/                shared fixtures and a fake EventSource for tests
   lib/                 api, search, statusMeta
 docs/ARCHITECTURE_AND_SECURITY.md
 docker-compose.yml, run_local.ps1, run_local.sh
 scripts/check_file_length.py   keeps every source file within 200 lines
-.github/workflows/ci.yml   file length check, backend tests, frontend type check and build
+.github/workflows/ci.yml   file length check, backend and frontend tests, build, Docker smoke test
 ```
 
 ## Tests
@@ -208,8 +209,12 @@ python -m venv .venv
 ```bash
 cd frontend
 npm ci
+npm test         # search, API client, stream reconnection, alarm card
 npm run build    # type check + production build
 ```
+
+CI runs all of the above and also builds the Docker images, starts the stack and checks
+the UI, the API, the stream through Nginx and a fault injection round trip.
 
 Generate the sample spreadsheet and parse it from the command line. The command writes
 `sample.xlsx` itself (from the built-in dataset) and then prints the rules it read back:
