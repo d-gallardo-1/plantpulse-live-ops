@@ -99,6 +99,24 @@ jobs:
         run: |
           curl --fail --silent --show-error -o matrix.xlsx "$BASE_URL/api/v1/matrix/export-sample"
           curl --fail --silent --show-error -X POST --data-binary @matrix.xlsx             -H "Content-Type: application/octet-stream"             "$BASE_URL/api/v1/matrix/upload?filename=matrix.xlsx" | grep -q '"rule_count":12'
+      - name: Largest allowed upload, three at once, within the temp storage cap
+        run: |
+          # Generated inside the backend container, which has the spreadsheet library.
+          docker compose exec -T backend python - < scripts/make_large_workbook.py > big.xlsx
+          size="$(stat -c %s big.xlsx)"
+          echo "generated workbook: $size bytes"
+          test "$size" -gt 1800000
+          test "$size" -lt 2097152
+          for n in 1 2 3; do
+            curl --silent --show-error -X POST --data-binary @big.xlsx -H "Content-Type: application/octet-stream" -o "upload_$n.json" -w "%{http_code}" "$BASE_URL/api/v1/matrix/upload?filename=big_$n.xlsx" > "status_$n.txt" &
+          done
+          wait
+          for n in 1 2 3; do
+            echo "upload $n: HTTP $(cat "status_$n.txt") $(cat "upload_$n.json")"
+            test "$(cat "status_$n.txt")" = "200"
+            grep -q '"rule_count":12' "upload_$n.json"
+          done
+          curl --fail --silent --show-error -X POST "$BASE_URL/api/v1/matrix/restore-default" > /dev/null
       - name: Containers do not run as root
         run: |
           # Assigned separately so the step fails if the command itself fails,

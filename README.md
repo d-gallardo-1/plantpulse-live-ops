@@ -194,6 +194,7 @@ frontend/src/
 docs/ARCHITECTURE_AND_SECURITY.md
 docker-compose.yml, run_local.ps1, run_local.sh
 scripts/check_file_length.py   keeps every source file within 200 lines
+scripts/make_large_workbook.py  near-limit upload used by the CI smoke test
 .github/workflows/ci.yml   file length check, backend and frontend tests, build, Docker smoke test
 ```
 
