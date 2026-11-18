@@ -238,6 +238,13 @@ cd backend
 - The Excel parser handles the layout shown in the sample workbook and tolerates extra
   title rows, reordered columns and unknown columns. Real matrices vary much more.
 
+## Contact
+
+Built by Dario Gallardo. Questions, feedback and collaboration are welcome:
+
+- LinkedIn: [linkedin.com/in/dario-gallardo-0b1654304](https://www.linkedin.com/in/dario-gallardo-0b1654304/)
+- Bugs and suggestions: [open an issue](https://github.com/d-gallardo-1/plantpulse-live-ops/issues)
+
 ## License
 
 [MIT](LICENSE)
