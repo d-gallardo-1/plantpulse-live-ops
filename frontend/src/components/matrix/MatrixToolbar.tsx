@@ -1,6 +1,7 @@
 import { Download, RotateCcw, Upload } from 'lucide-react';
 import { useRef, useState, type ChangeEvent } from 'react';
 import { api, MAX_UPLOAD_BYTES } from '../../lib/api';
+import { DEMO_MODE } from '../../lib/demoMode';
 
 interface Props {
   matrixSource: string;
@@ -60,6 +61,15 @@ export function MatrixToolbar({ matrixSource, pending, run }: Props) {
       }
     });
   };
+
+  if (DEMO_MODE) {
+    return (
+      <p className="text-xs text-slate-400">
+        Source: <span className="text-slate-200">{matrixSource}</span>. Downloading the workbook
+        and uploading an edited copy need the backend, so they are not part of this browser demo.
+      </p>
+    );
+  }
 
   return (
     <div className="space-y-2">

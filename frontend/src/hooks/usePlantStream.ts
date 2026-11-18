@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import { useDemoStream } from '../demo/useDemoStream';
 import { API_BASE } from '../lib/api';
+import { DEMO_MODE } from '../lib/demoMode';
 import type { PlantSnapshot, StreamStatus } from '../types/telemetry';
 
 export const RETRY_MS = 3000;
@@ -18,7 +20,7 @@ const FAILURES_BEFORE_DISCONNECTED = 3;
  * the server answers with an HTTP error (for example a 502 while the backend
  * restarts). That case is retried manually here.
  */
-export function usePlantStream(): { snapshot: PlantSnapshot | null; status: StreamStatus } {
+function useLiveStream(): { snapshot: PlantSnapshot | null; status: StreamStatus } {
   const [snapshot, setSnapshot] = useState<PlantSnapshot | null>(null);
   const [status, setStatus] = useState<StreamStatus>('RECONNECTING');
 
@@ -95,3 +97,6 @@ export function usePlantStream(): { snapshot: PlantSnapshot | null; status: Stre
 
   return { snapshot, status };
 }
+
+/** The live SSE stream, or the in-page simulation in the browser demo build. */
+export const usePlantStream = DEMO_MODE ? useDemoStream : useLiveStream;

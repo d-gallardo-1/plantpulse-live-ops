@@ -1,4 +1,6 @@
+import { demoApi } from '../demo/demoApi';
 import type { MatrixReplacedResponse, MatrixResponse, NodeStatus } from '../types/telemetry';
+import { DEMO_MODE } from './demoMode';
 
 // Same-origin API: Nginx (Docker) or the Vite dev server proxies /api to the backend.
 export const API_BASE = '/api/v1';
@@ -34,7 +36,7 @@ const post = <T = unknown>(path: string, body?: unknown) =>
 
 const code = (alarmCode: string) => encodeURIComponent(alarmCode);
 
-export const api = {
+const httpApi = {
   matrix: () => request<MatrixResponse>('/matrix'),
   trigger: (alarmCode: string) => post(`/simulate/trigger/${code(alarmCode)}`),
   acknowledge: (alarmCode: string) => post(`/alarms/${code(alarmCode)}/acknowledge`),
@@ -53,6 +55,9 @@ export const api = {
   restoreMatrix: () => post<MatrixReplacedResponse>('/matrix/restore-default'),
   exportSampleUrl: `${API_BASE}/matrix/export-sample`,
 };
+
+/** In the browser demo build the same calls are served by the in-page simulation. */
+export const api: typeof httpApi = DEMO_MODE ? demoApi : httpApi;
 
 export function formatTime(iso: string): string {
   const date = new Date(iso);

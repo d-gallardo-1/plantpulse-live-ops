@@ -2,11 +2,13 @@ import { useMemo, useState } from 'react';
 import { LiveAlarmDiagnostics } from './components/LiveAlarmDiagnostics';
 import { MatrixExplorer } from './components/MatrixExplorer';
 import { NetworkWatchdog } from './components/NetworkWatchdog';
+import { DemoNotice } from './components/shared/DemoNotice';
 import { ProcessTopologyMap } from './components/ProcessTopologyMap';
 import { TopTelemetryBar } from './components/TopTelemetryBar';
 import { useLatencyHistory } from './hooks/useLatencyHistory';
 import { usePlantStream } from './hooks/usePlantStream';
 import { useRules } from './hooks/useRules';
+import { DEMO_MODE } from './lib/demoMode';
 import type { ViewId } from './types/telemetry';
 
 /** Application shell (orchestrator): one SSE subscription feeds every view. */
@@ -29,6 +31,8 @@ export default function App() {
       <TopTelemetryBar snapshot={snapshot} streamStatus={status} view={view} onViewChange={setView} />
 
       <main className="mx-auto max-w-[1600px] space-y-4 px-4 py-4">
+        {DEMO_MODE && <DemoNotice />}
+
         {!snapshot && (
           <p className="panel p-4 text-sm text-slate-300" role="status">
             {status === 'DISCONNECTED'
