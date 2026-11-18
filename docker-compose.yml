@@ -14,9 +14,10 @@ services:
     # The frontend below waits for it through "condition: service_healthy".
     read_only: true
     # The spreadsheet library writes temporary files while it builds a workbook,
-    # so the read-only container still needs a writable, in-memory /tmp.
+    # so the read-only container still needs a writable, in-memory /tmp. It is
+    # capped: without a size, a tmpfs may grow to half of the host's memory.
     tmpfs:
-      - /tmp
+      - /tmp:size=64m
     cap_drop:
       - ALL
     security_opt:
@@ -33,8 +34,9 @@ services:
     ports:
       - "127.0.0.1:8080:8080"
     read_only: true
+    # Nginx keeps its pid file and temporary request bodies here (capped).
     tmpfs:
-      - /tmp
+      - /tmp:size=32m
     cap_drop:
       - ALL
     security_opt:

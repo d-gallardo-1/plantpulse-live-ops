@@ -101,7 +101,10 @@ The upload path therefore checks, in this order and before the parser sees anyth
 2. the body is at most 2 MB, enforced while reading, not only from the declared length;
 3. the content is a ZIP archive that contains a workbook part;
 4. the archive has a bounded number of parts and expands to at most 25 MB;
-5. the parsed matrix has valid codes, severities and non-blank cells, references only
+5. the sheet spans at most 5,000 rows and 100 columns. This is checked before any row
+   is read: a file of a few kilobytes can declare a million rows through one stray cell,
+   and walking them would exhaust memory;
+6. the parsed matrix has valid codes, severities and non-blank cells, references only
    known stations, and has at most 500 rules.
 
 A rejected upload changes nothing: the previous matrix and the active alarms stay as
