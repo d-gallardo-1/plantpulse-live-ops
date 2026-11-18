@@ -1,5 +1,6 @@
 import { Gauge, Lock, Target, Timer, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { DEMO_MODE } from '../../lib/demoMode';
 import { TONE_CLASSES, type Tone } from '../../lib/statusMeta';
 import type { Kpis, StreamStatus } from '../../types/telemetry';
 import { StatusBadge } from '../shared/StatusBadge';
@@ -88,7 +89,9 @@ export function KpiRibbon({ kpis, streamStatus, sequence }: Props) {
       </Tile>
 
       <div className="panel col-span-2 flex flex-col gap-1 px-3 py-2.5 md:col-span-1">
-        <span className="panel-title">SSE Stream Health</span>
+        <span className="panel-title">
+          {DEMO_MODE ? 'In-Browser Simulation' : 'SSE Stream Health'}
+        </span>
         <div className="pt-0.5" role="status" aria-live="polite">
           <StatusBadge status={streamStatus} />
         </div>

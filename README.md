@@ -115,6 +115,26 @@ powershell -ExecutionPolicy Bypass -File .\run_local.ps1
 
 Then open <http://127.0.0.1:5173>.
 
+### Browser demo (no backend)
+
+To show the interface to someone without running anything, build it as a single
+self-contained file in which the plant simulation runs inside the page:
+
+```bash
+cd frontend
+npm run build:demo
+```
+
+This writes `frontend/dist-demo/plantpulse-demo.html`, which opens in any browser,
+and `plantpulse-demo.fragment.html`, the same content without the page wrapper for
+hosts that add their own. The simulation is a TypeScript port of the backend engine
+(`frontend/src/demo`) fed by a generated copy of the same dataset. Each visitor gets
+a private plant. Downloading and uploading the matrix workbook are not available in
+this build, and it does not exercise the backend, the SSE stream or Docker.
+
+After changing the backend dataset, refresh the copy with
+`python scripts/export_demo_dataset.py --write` (a backend test fails if it is stale).
+
 ### Two-minute tour
 
 1. Turn **Auto-Cycle Simulation** off in the demo controls.
