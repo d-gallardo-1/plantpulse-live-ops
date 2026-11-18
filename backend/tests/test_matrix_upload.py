@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import io
+import time
 import zipfile
 
 import pytest
 from openpyxl import load_workbook
 
+from app.matrix.parser import MAX_SHEET_COLUMNS, MAX_SHEET_ROWS
 from app.matrix.upload import MAX_UPLOAD_BYTES
 from app.matrix_parser import rules_to_excel_bytes
 from app.mock_data import CAUSE_EFFECT_RULES
@@ -147,6 +149,44 @@ def test_invalid_matrix_is_rejected_and_nothing_changes(client, edit, message):
     assert state["matrix_revision"] == 0
     assert [a["rule"]["alarm_code"] for a in state["active_alarms"]] == ["ALM-207"]
     assert client.get(f"{API}/matrix").json()["count"] == 12
+
+
+def _stray(row: int, column: int):
+    """Edit that leaves one cell far from the matrix, as hand-edited sheets often do."""
+    return lambda sheet: sheet.cell(row=row, column=column, value="stray")
+
+
+@pytest.mark.parametrize(
+    ("edit", "message"),
+    [
+        (_stray(100_000, 20), "spans 100000 rows"),
+        (_stray(1_048_576, 20), "spans 1048576 rows"),
+        (_stray(MAX_SHEET_ROWS + 1, 20), f"limit is {MAX_SHEET_ROWS} rows"),
+        (_stray(10, MAX_SHEET_COLUMNS + 1), f"and {MAX_SHEET_COLUMNS + 1} columns"),
+    ],
+)
+def test_small_file_with_huge_sheet_dimensions_is_rejected_before_parsing(client, edit, message):
+    """A few kilobytes on disk can declare a million rows; the parser must not walk them."""
+    data = _workbook(edit)
+    assert len(data) < 20_000
+
+    started = time.perf_counter()
+    response = _upload(client, data)
+    elapsed = time.perf_counter() - started
+
+    assert response.status_code == 422
+    assert message in response.json()["detail"]
+    assert elapsed < 2.0
+    assert client.get(f"{API}/state").json()["matrix_revision"] == 0
+
+
+def test_sheet_at_the_dimension_limit_is_still_accepted(client):
+    data = _workbook(_stray(MAX_SHEET_ROWS, MAX_SHEET_COLUMNS))
+
+    response = _upload(client, data)
+
+    assert response.status_code == 200
+    assert response.json()["rule_count"] == 12
 
 
 def test_upload_requires_filename(client):
