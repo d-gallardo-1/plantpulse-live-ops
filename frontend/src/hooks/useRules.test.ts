@@ -3,7 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from '../lib/api';
 import { makeRule } from '../test/fixtures';
 import type { StreamStatus } from '../types/telemetry';
-import { RULES_RETRY_MAX_MS, RULES_RETRY_MS, retryDelay, useRules } from './useRules';
+import {
+  RULES_RETRY_JITTER,
+  RULES_RETRY_MAX_MS,
+  RULES_RETRY_MS,
+  retryDelay,
+  useRules,
+} from './useRules';
 
 const response = (title: string) => ({
   query: '',
@@ -12,7 +18,11 @@ const response = (title: string) => ({
   rules: [makeRule({ title })],
 });
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => {
+  vi.useFakeTimers();
+  // 0.5 is the midpoint of the jitter range, so waits are the nominal delays.
+  vi.spyOn(Math, 'random').mockReturnValue(0.5);
+});
 afterEach(() => vi.useRealTimers());
 
 /** Lets resolved promises and the given amount of timer time run. */
@@ -113,8 +123,24 @@ describe('useRules', () => {
     expect(matrix).toHaveBeenCalledTimes(5);
   });
 
-  it('caps the retry delay', () => {
-    expect([0, 1, 2, 3, 4, 10].map(retryDelay)).toEqual([3000, 6000, 12000, 24000, 30000, 30000]);
+  it('doubles the nominal retry delay up to a cap', () => {
+    const nominal = [0, 1, 2, 3, 4, 10].map((attempt) => retryDelay(attempt, 0.5));
+
+    expect(nominal).toEqual([3000, 6000, 12000, 24000, 30000, 30000]);
+  });
+
+  it('varies each delay by the jitter share in both directions', () => {
+    expect(RULES_RETRY_JITTER).toBe(0.2);
+    expect(retryDelay(0, 0)).toBe(2400);
+    expect(retryDelay(0, 1)).toBe(3600);
+    expect(retryDelay(10, 0)).toBe(24000);
+    expect(retryDelay(10, 1)).toBe(36000);
+  });
+
+  it('draws a fresh random delay for each retry by default', () => {
+    vi.mocked(Math.random).mockReturnValueOnce(0).mockReturnValueOnce(1);
+
+    expect([retryDelay(1), retryDelay(1)]).toEqual([4800, 7200]);
   });
 
   it('stops retrying after unmount', async () => {

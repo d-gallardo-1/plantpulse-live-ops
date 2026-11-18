@@ -5,9 +5,18 @@ import type { CauseEffectRule, StreamStatus } from '../types/telemetry';
 export const RULES_RETRY_MS = 3000;
 export const RULES_RETRY_MAX_MS = 30000;
 
-/** Wait before retry number `attempt` (0-based): 3 s, 6 s, 12 s, 24 s, then 30 s. */
-export function retryDelay(attempt: number): number {
-  return Math.min(RULES_RETRY_MS * 2 ** attempt, RULES_RETRY_MAX_MS);
+/** Share of the delay that is randomised, in each direction. */
+export const RULES_RETRY_JITTER = 0.2;
+
+/**
+ * Wait before retry number `attempt` (0-based): about 3 s, 6 s, 12 s, 24 s, then
+ * 30 s. Each wait is varied by up to 20 % either way, so clients that failed
+ * together (for example when the backend restarts) do not retry in step.
+ * `random` is a number in [0, 1); 0.5 gives the nominal delay.
+ */
+export function retryDelay(attempt: number, random: number = Math.random()): number {
+  const nominal = Math.min(RULES_RETRY_MS * 2 ** attempt, RULES_RETRY_MAX_MS);
+  return Math.round(nominal * (1 - RULES_RETRY_JITTER + 2 * RULES_RETRY_JITTER * random));
 }
 
 export interface RulesState {
@@ -21,7 +30,8 @@ export interface RulesState {
  * reports a new matrix revision (after an upload or a restore).
  *
  * A failed load is retried while the stream stays connected, with a growing
- * delay so a broken endpoint is not polled at a fixed rate by every client,
+ * and slightly randomised delay so a broken endpoint is not polled at a fixed
+ * rate, or at the same instant, by every client,
  * and the failure is reported so the UI can say why the matrix is missing.
  */
 export function useRules(streamStatus: StreamStatus, revision: number | null): RulesState {
