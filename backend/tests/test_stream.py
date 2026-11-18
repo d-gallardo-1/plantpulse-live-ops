@@ -91,12 +91,15 @@ def test_every_command_reaches_stream_subscribers(client, engine):
     assert [entry.alarm_code for entry in cleared.alarm_history] == ["ALM-207"]
 
     client.post(f"{API}/simulate/network/GW-EDGE-01", json={"status": "OFFLINE"})
-    assert next_snapshot().kpis.gateway_latency_ms is None
+    overridden = next_snapshot()
+    assert overridden.kpis.gateway_latency_ms is None
 
     client.post(f"{API}/simulate/reset")
-    assert next_snapshot().event_log[0].kind.value == "RESET"
+    reset = next_snapshot()
+    assert reset.event_log[0].kind.value == "RESET"
 
-    sequences = [raised.sequence, acknowledged.sequence, cleared.sequence]
+    snapshots = [raised, acknowledged, cleared, overridden, reset]
+    sequences = [snapshot.sequence for snapshot in snapshots]
     assert sequences == sorted(set(sequences))
     assert queue.empty()  # one snapshot per command, no duplicates
 

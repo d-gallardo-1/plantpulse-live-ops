@@ -17,6 +17,7 @@ export default function App() {
   const [view, setView] = useState<ViewId>('live');
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
   const online = status === 'CONNECTED';
+  const offline = status === 'DISCONNECTED';
 
   const activeCodes = useMemo(
     () => new Set((snapshot?.active_alarms ?? []).map((alarm) => alarm.rule.alarm_code)),
@@ -38,15 +39,18 @@ export default function App() {
 
         {snapshot && !online && (
           <p role="alert" className="rounded-md border border-warn/50 bg-warn/10 px-3 py-2 text-sm text-warn">
-            Live connection lost. The data below is the last snapshot received and may be out of
-            date; controls are disabled until the stream is back.
+            {offline
+              ? 'Live connection lost. The data below is the last snapshot received and may be out of date; controls are disabled until the stream is back.'
+              : 'Reconnecting to the live stream. The data below may be a few seconds old.'}
           </p>
         )}
 
         {snapshot && (
-          // A disabled fieldset disables every control inside it, so no view
-          // can send a command that is bound to fail while the stream is down.
-          <fieldset disabled={!online} className="m-0 min-w-0 space-y-4 border-0 p-0">
+          // A disabled fieldset disables every form control inside it, local
+          // ones such as search included. That is deliberate, but only once the
+          // connection is given up on: during a short reconnect an operator
+          // must still be able to acknowledge an alarm.
+          <fieldset disabled={offline} className="m-0 min-w-0 space-y-4 border-0 p-0">
             {view === 'live' && (
               <>
                 <ProcessTopologyMap

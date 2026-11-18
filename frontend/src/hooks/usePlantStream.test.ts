@@ -2,10 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeEventSource } from '../test/fakeEventSource';
 import { makeSnapshot } from '../test/fixtures';
-import { usePlantStream } from './usePlantStream';
-
-const STALE_MS = 8000;
-const RETRY_MS = 3000;
+import { RETRY_MS, STALE_MS, usePlantStream } from './usePlantStream';
 
 beforeEach(() => {
   vi.useFakeTimers();

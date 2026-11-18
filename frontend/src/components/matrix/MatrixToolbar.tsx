@@ -42,7 +42,7 @@ export function MatrixToolbar({ matrixSource, pending, run }: Props) {
           }`,
         });
       } catch (cause) {
-        const text = cause instanceof Error ? cause.message : 'Upload failed';
+        const text = cause instanceof Error ? cause.message : 'unknown error';
         setNotice({ ok: false, text: `Upload rejected: ${text}` });
       }
     });
@@ -55,7 +55,7 @@ export function MatrixToolbar({ matrixSource, pending, run }: Props) {
         await api.restoreMatrix();
         setNotice({ ok: true, text: 'Built-in sample matrix restored.' });
       } catch (cause) {
-        const text = cause instanceof Error ? cause.message : 'Restore failed';
+        const text = cause instanceof Error ? cause.message : 'unknown error';
         setNotice({ ok: false, text: `Restore failed: ${text}` });
       }
     });

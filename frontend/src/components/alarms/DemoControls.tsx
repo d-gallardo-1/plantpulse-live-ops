@@ -7,7 +7,7 @@ interface DemoFault {
   hint: string;
 }
 
-/** Alarms offered first as one-click demo buttons when the loaded matrix has them. */
+/** Alarms offered as one-click demo buttons when the loaded matrix has them (in matrix order). */
 export const PREFERRED_FAULT_CODES = ['ALM-203', 'ALM-205', 'ALM-207', 'ALM-211'];
 
 /**

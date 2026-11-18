@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react';
 import { API_BASE } from '../lib/api';
 import type { PlantSnapshot, StreamStatus } from '../types/telemetry';
 
-const RETRY_MS = 3000;
+export const RETRY_MS = 3000;
 // The backend sends an update or a heartbeat event at least every 5 s. If
 // nothing arrives for this long the connection is considered dead and rebuilt.
 // This catches the case where a proxy keeps the browser side open after the
 // backend has gone away, which EventSource alone does not report.
-const STALE_MS = 8000;
+export const STALE_MS = 8000;
 const FAILURES_BEFORE_DISCONNECTED = 3;
 
 /**
