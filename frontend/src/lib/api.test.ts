@@ -15,21 +15,39 @@ function mockFetch(status: number, body: unknown, json = true) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('api', () => {
-  it('posts fault commands to the simulation endpoints', async () => {
+  it.each([
+    ['trigger', () => api.trigger('ALM-207'), '/api/v1/simulate/trigger/ALM-207', undefined],
+    ['acknowledge', () => api.acknowledge('ALM-207'), '/api/v1/alarms/ALM-207/acknowledge', undefined],
+    ['clear', () => api.clear('ALM-207'), '/api/v1/simulate/clear/ALM-207', undefined],
+    ['reset', () => api.reset(), '/api/v1/simulate/reset', undefined],
+    ['auto-cycle', () => api.setAutoCycle(false), '/api/v1/simulate/auto-cycle', { enabled: false }],
+    [
+      'network override',
+      () => api.setNodeStatus('GW-EDGE-01', 'OFFLINE'),
+      '/api/v1/simulate/network/GW-EDGE-01',
+      { status: 'OFFLINE' },
+    ],
+    ['restore matrix', () => api.restoreMatrix(), '/api/v1/matrix/restore-default', undefined],
+  ])('sends the %s command as a POST to its endpoint', async (_name, call, url, body) => {
     const fetchMock = mockFetch(200, {});
 
-    await api.trigger('ALM-207');
-    await api.acknowledge('ALM-207');
-    await api.setAutoCycle(false);
+    await call();
 
-    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
-      '/api/v1/simulate/trigger/ALM-207',
-      '/api/v1/alarms/ALM-207/acknowledge',
-      '/api/v1/simulate/auto-cycle',
-    ]);
-    const [, init] = fetchMock.mock.calls[2];
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [calledUrl, init] = fetchMock.mock.calls[0];
+    expect(calledUrl).toBe(url);
     expect(init?.method).toBe('POST');
-    expect(init?.body).toBe(JSON.stringify({ enabled: false }));
+    expect(init?.body).toBe(body === undefined ? undefined : JSON.stringify(body));
+  });
+
+  it('reads the matrix with a plain GET', async () => {
+    const fetchMock = mockFetch(200, { rules: [] });
+
+    await api.matrix();
+
+    const [calledUrl, init] = fetchMock.mock.calls[0];
+    expect(calledUrl).toBe('/api/v1/matrix');
+    expect(init?.method).toBeUndefined();
   });
 
   it('surfaces the explanation the server sends with a rejection', async () => {
@@ -65,7 +83,8 @@ describe('formatTime', () => {
     expect(formatTime('not a date')).toBe('--:--:--');
   });
 
-  it('formats a valid timestamp as 24-hour time', () => {
-    expect(formatTime('2026-11-18T10:05:42Z')).toMatch(/^\d{2}:\d{2}:\d{2}$/);
+  it('formats a valid timestamp as local 24-hour time', () => {
+    const local = new Date(2026, 10, 18, 14, 5, 9); // built in local time on purpose
+    expect(formatTime(local.toISOString())).toBe('14:05:09');
   });
 });

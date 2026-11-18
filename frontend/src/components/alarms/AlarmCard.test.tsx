@@ -21,6 +21,27 @@ describe('AlarmCard', () => {
     expect(onAcknowledge).toHaveBeenCalledWith('ALM-207');
   });
 
+  it('lays out the hardware trace as seven ordered steps with their content', () => {
+    render(<AlarmCard alarm={makeAlarm()} pending={noPending} onAcknowledge={vi.fn()} onClear={vi.fn()} />);
+
+    const steps = screen.getAllByRole('listitem').map((item) => item.textContent ?? '');
+
+    expect(steps).toHaveLength(7);
+    const expected: [string, string][] = [
+      ['1Alarm Code', 'ALM-207'],
+      ['2Root Cause', 'Closed position not reached within 3 s'],
+      ['3System Interlock Effect', 'Locks carousel advance.'],
+      ['4Physical Instrument Tag', 'ZS-309'],
+      ['5PLC I/O Address', 'R2.S6.DO01'],
+      ['6Control Cabinet / Junction Box', 'CP-03 / JB-309'],
+      ['7Recommended Field Action', 'Stop the feed and clear the obstruction.'],
+    ];
+    expected.forEach(([heading, content], index) => {
+      expect(steps[index].startsWith(heading)).toBe(true);
+      expect(steps[index]).toContain(content);
+    });
+  });
+
   it('replaces the Acknowledge button with the acknowledgement time once acknowledged', () => {
     const alarm = makeAlarm({ acknowledged_at: '2026-11-18T10:00:05Z' });
     render(<AlarmCard alarm={alarm} pending={noPending} onAcknowledge={vi.fn()} onClear={vi.fn()} />);

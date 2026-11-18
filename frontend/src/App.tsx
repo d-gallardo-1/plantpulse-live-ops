@@ -16,6 +16,7 @@ export default function App() {
   const latencyHistory = useLatencyHistory(snapshot);
   const [view, setView] = useState<ViewId>('live');
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
+  const online = status === 'CONNECTED';
 
   const activeCodes = useMemo(
     () => new Set((snapshot?.active_alarms ?? []).map((alarm) => alarm.rule.alarm_code)),
@@ -27,35 +28,52 @@ export default function App() {
       <TopTelemetryBar snapshot={snapshot} streamStatus={status} view={view} onViewChange={setView} />
 
       <main className="mx-auto max-w-[1600px] space-y-4 px-4 py-4">
-        {!snapshot ? (
+        {!snapshot && (
           <p className="panel p-4 text-sm text-slate-300" role="status">
             {status === 'DISCONNECTED'
               ? 'Cannot reach the backend. Retrying every few seconds; check that the API is running on port 8000.'
               : 'Waiting for the first plant snapshot…'}
           </p>
-        ) : view === 'live' ? (
-          <>
-            <ProcessTopologyMap
-              stations={snapshot.stations}
-              selectedStationId={selectedStationId}
-              onSelect={setSelectedStationId}
-            />
-            <LiveAlarmDiagnostics
-              snapshot={snapshot}
-              rules={rules}
-              selectedStationId={selectedStationId}
-              onClearFilter={() => setSelectedStationId(null)}
-            />
-          </>
-        ) : view === 'matrix' ? (
-          <MatrixExplorer
-            rules={rules}
-            stations={snapshot.stations}
-            activeCodes={activeCodes}
-            matrixSource={snapshot.matrix_source}
-          />
-        ) : (
-          <NetworkWatchdog nodes={snapshot.network_nodes} history={latencyHistory} />
+        )}
+
+        {snapshot && !online && (
+          <p role="alert" className="rounded-md border border-warn/50 bg-warn/10 px-3 py-2 text-sm text-warn">
+            Live connection lost. The data below is the last snapshot received and may be out of
+            date; controls are disabled until the stream is back.
+          </p>
+        )}
+
+        {snapshot && (
+          // A disabled fieldset disables every control inside it, so no view
+          // can send a command that is bound to fail while the stream is down.
+          <fieldset disabled={!online} className="m-0 min-w-0 space-y-4 border-0 p-0">
+            {view === 'live' && (
+              <>
+                <ProcessTopologyMap
+                  stations={snapshot.stations}
+                  selectedStationId={selectedStationId}
+                  onSelect={setSelectedStationId}
+                />
+                <LiveAlarmDiagnostics
+                  snapshot={snapshot}
+                  rules={rules}
+                  selectedStationId={selectedStationId}
+                  onClearFilter={() => setSelectedStationId(null)}
+                />
+              </>
+            )}
+            {view === 'matrix' && (
+              <MatrixExplorer
+                rules={rules}
+                stations={snapshot.stations}
+                activeCodes={activeCodes}
+                matrixSource={snapshot.matrix_source}
+              />
+            )}
+            {view === 'network' && (
+              <NetworkWatchdog nodes={snapshot.network_nodes} history={latencyHistory} />
+            )}
+          </fieldset>
         )}
       </main>
 

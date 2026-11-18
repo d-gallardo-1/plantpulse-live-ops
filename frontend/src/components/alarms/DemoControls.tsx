@@ -7,23 +7,18 @@ interface DemoFault {
   hint: string;
 }
 
-/** Preferred one-click faults for the built-in matrix. Labels carry the exact alarm code. */
-const PREFERRED_FAULTS: DemoFault[] = [
-  { code: 'ALM-203', hint: 'Guard Gate Open' },
-  { code: 'ALM-205', hint: 'Vibrator Overtemp' },
-  { code: 'ALM-207', hint: 'Hopper Gate Stuck' },
-  { code: 'ALM-211', hint: 'Low Vacuum' },
-];
+/** Alarms offered first as one-click demo buttons when the loaded matrix has them. */
+export const PREFERRED_FAULT_CODES = ['ALM-203', 'ALM-205', 'ALM-207', 'ALM-211'];
 
 /**
- * The buttons must only offer alarms that exist in the loaded matrix. After a
- * custom matrix is uploaded, the first rules of that matrix are offered instead.
+ * The buttons only offer alarms that exist in the loaded matrix, and their text
+ * is the title in that matrix, so an uploaded workbook is reflected here too.
+ * When none of the preferred alarms exist, the first rules are offered instead.
  */
-function demoFaults(rules: CauseEffectRule[]): DemoFault[] {
-  const codes = new Set(rules.map((rule) => rule.alarm_code));
-  const preferred = PREFERRED_FAULTS.filter((fault) => codes.has(fault.code));
-  if (preferred.length > 0 || rules.length === 0) return preferred;
-  return rules.slice(0, 4).map((rule) => ({ code: rule.alarm_code, hint: rule.title }));
+export function demoFaults(rules: CauseEffectRule[]): DemoFault[] {
+  const preferred = rules.filter((rule) => PREFERRED_FAULT_CODES.includes(rule.alarm_code));
+  const offered = preferred.length > 0 ? preferred : rules.slice(0, 4);
+  return offered.map((rule) => ({ code: rule.alarm_code, hint: rule.title }));
 }
 
 interface Props {

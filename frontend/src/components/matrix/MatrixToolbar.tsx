@@ -48,11 +48,18 @@ export function MatrixToolbar({ matrixSource, pending, run }: Props) {
     });
   };
 
-  const restore = () =>
+  const restore = () => {
+    setNotice(null);
     run('matrix-restore', async () => {
-      await api.restoreMatrix();
-      setNotice({ ok: true, text: 'Built-in sample matrix restored.' });
+      try {
+        await api.restoreMatrix();
+        setNotice({ ok: true, text: 'Built-in sample matrix restored.' });
+      } catch (cause) {
+        const text = cause instanceof Error ? cause.message : 'Restore failed';
+        setNotice({ ok: false, text: `Restore failed: ${text}` });
+      }
     });
+  };
 
   return (
     <div className="space-y-2">

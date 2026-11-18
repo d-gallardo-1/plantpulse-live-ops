@@ -29,17 +29,24 @@ export function usePlantStream(): { snapshot: PlantSnapshot | null; status: Stre
     let disposed = false;
     let failures = 0;
 
+    const recordFailure = () => {
+      failures += 1;
+      setStatus(failures >= FAILURES_BEFORE_DISCONNECTED ? 'DISCONNECTED' : 'RECONNECTING');
+    };
+
     const armStaleTimer = () => {
       window.clearTimeout(staleTimer);
       staleTimer = window.setTimeout(() => {
-        failures += 1;
-        setStatus(failures >= FAILURES_BEFORE_DISCONNECTED ? 'DISCONNECTED' : 'RECONNECTING');
+        recordFailure();
         scheduleRetry();
       }, STALE_MS);
     };
 
     const scheduleRetry = () => {
       source?.close();
+      // A rebuild is already on its way: the silence timer must not fire again
+      // and count the same outage twice.
+      window.clearTimeout(staleTimer);
       window.clearTimeout(retryTimer);
       retryTimer = window.setTimeout(connect, RETRY_MS);
     };
@@ -54,6 +61,9 @@ export function usePlantStream(): { snapshot: PlantSnapshot | null; status: Stre
     function connect() {
       if (disposed) return;
       source = new EventSource(`${API_BASE}/stream`);
+      // Armed from the start: a connection that is accepted but never sends a
+      // byte fires neither `open` nor `error`, and must still be given up on.
+      armStaleTimer();
       source.addEventListener('snapshot', onSnapshot as EventListener);
       source.addEventListener('update', onSnapshot as EventListener);
       source.addEventListener('heartbeat', armStaleTimer);
@@ -63,9 +73,13 @@ export function usePlantStream(): { snapshot: PlantSnapshot | null; status: Stre
         armStaleTimer();
       };
       source.onerror = () => {
-        failures += 1;
-        setStatus(failures >= FAILURES_BEFORE_DISCONNECTED ? 'DISCONNECTED' : 'RECONNECTING');
-        if (source?.readyState === EventSource.CLOSED) scheduleRetry();
+        recordFailure();
+        if (source?.readyState === EventSource.CLOSED) {
+          scheduleRetry();
+        } else {
+          // The browser is reconnecting by itself: give that attempt a full window.
+          armStaleTimer();
+        }
       };
     }
 
