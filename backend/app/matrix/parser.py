@@ -15,6 +15,12 @@ from .layout import HEADER_ALIASES, REQUIRED_FIELDS, SHEET_NAME, normalise_heade
 #: How many leading rows are searched for the column header row.
 _HEADER_SEARCH_ROWS = 30
 
+#: Largest sheet the parser will walk. A workbook's size on disk says nothing
+#: about its dimensions: one stray cell on the last row of a tiny file would
+#: otherwise make the parser visit, and allocate, more than a million rows.
+MAX_SHEET_ROWS = 5000
+MAX_SHEET_COLUMNS = 100
+
 
 class MatrixParseError(ValueError):
     """Raised when a workbook does not look like a Cause & Effect matrix."""
@@ -74,6 +80,13 @@ def parse_excel_matrix(path: str | Path | BinaryIO) -> list[CauseEffectRule]:
     """
     workbook = load_workbook(path, data_only=True)
     sheet = workbook[SHEET_NAME] if SHEET_NAME in workbook.sheetnames else workbook.active
+
+    if sheet.max_row > MAX_SHEET_ROWS or sheet.max_column > MAX_SHEET_COLUMNS:
+        raise MatrixParseError(
+            f"The sheet spans {sheet.max_row} rows and {sheet.max_column} columns; the "
+            f"limit is {MAX_SHEET_ROWS} rows and {MAX_SHEET_COLUMNS} columns. Remove "
+            "stray cells or formatting below and to the right of the matrix."
+        )
 
     header_row = _find_header_row(sheet)
     groups = _group_headers(sheet, header_row)
