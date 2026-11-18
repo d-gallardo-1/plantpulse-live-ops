@@ -12,10 +12,12 @@ interface Props {
   stations: StationState[];
   activeCodes: Set<string>;
   matrixSource: string;
+  /** Why the matrix could not be loaded from the backend, or null. */
+  loadError: string | null;
 }
 
 /** Cause & Effect Matrix Explorer (orchestrator): instant search over every tag. */
-export function MatrixExplorer({ rules, stations, activeCodes, matrixSource }: Props) {
+export function MatrixExplorer({ rules, stations, activeCodes, matrixSource, loadError }: Props) {
   const [query, setQuery] = useState('');
   const [stationId, setStationId] = useState<string | null>(null);
   const { pending, error, run } = useAction();
@@ -81,10 +83,19 @@ export function MatrixExplorer({ rules, stations, activeCodes, matrixSource }: P
         )}
       </div>
 
+      {loadError && (
+        <p role="alert" className="rounded-md border border-warn/50 bg-warn/10 px-3 py-2 text-sm text-warn">
+          Could not load the matrix from the backend ({loadError}). Retrying automatically
+          {rules.length > 0 ? '; the rules below are the last ones loaded and may be out of date.' : '.'}
+        </p>
+      )}
+
       {results.length === 0 ? (
         <p className="panel p-4 text-sm text-slate-300">
           {rules.length === 0
-            ? 'Loading the matrix from the backend…'
+            ? loadError
+              ? 'No matrix is available yet.'
+              : 'Loading the matrix from the backend…'
             : 'No rule matches that search. Try a shorter tag, for example “JB-5” or “vacuum”.'}
         </p>
       ) : (

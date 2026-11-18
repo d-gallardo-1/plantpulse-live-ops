@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from '../lib/api';
 import { makeRule } from '../test/fixtures';
 import type { StreamStatus } from '../types/telemetry';
-import { RULES_RETRY_MS, useRules } from './useRules';
+import { RULES_RETRY_MAX_MS, RULES_RETRY_MS, retryDelay, useRules } from './useRules';
 
 const response = (title: string) => ({
   query: '',
@@ -35,7 +35,7 @@ describe('useRules', () => {
     rerender({ s: 'CONNECTED', r: 0 });
     await settle();
     expect(matrix).toHaveBeenCalledTimes(1);
-    expect(result.current.map((rule) => rule.title)).toEqual(['First']);
+    expect(result.current.rules.map((rule) => rule.title)).toEqual(['First']);
   });
 
   it('loads once per revision and reloads when the matrix is replaced', async () => {
@@ -53,28 +53,53 @@ describe('useRules', () => {
     rerender({ s: 'CONNECTED', r: 1 });
     await settle();
     expect(matrix).toHaveBeenCalledTimes(2);
-    expect(result.current.map((rule) => rule.title)).toEqual(['Uploaded']);
+    expect(result.current.rules.map((rule) => rule.title)).toEqual(['Uploaded']);
   });
 
-  it('retries a failed load while the stream stays connected', async () => {
+  it('retries a failed load with a growing delay and reports the reason meanwhile', async () => {
     const matrix = vi
       .spyOn(api, 'matrix')
       .mockRejectedValueOnce(new Error('HTTP 500'))
-      .mockRejectedValueOnce(new Error('HTTP 500'))
+      .mockRejectedValueOnce(new Error('HTTP 503'))
       .mockResolvedValueOnce(response('Recovered'));
     const { result } = render('CONNECTED', 0);
 
     await settle();
-    expect(result.current).toEqual([]);
+    expect(result.current).toEqual({ rules: [], loadError: 'HTTP 500' });
 
-    await settle(RULES_RETRY_MS);
+    await settle(RULES_RETRY_MS - 1);
+    expect(matrix).toHaveBeenCalledTimes(1);
+    await settle(1);
     expect(matrix).toHaveBeenCalledTimes(2);
-    await settle(RULES_RETRY_MS);
-    expect(matrix).toHaveBeenCalledTimes(3);
-    expect(result.current.map((rule) => rule.title)).toEqual(['Recovered']);
+    expect(result.current.loadError).toBe('HTTP 503');
 
-    await settle(RULES_RETRY_MS * 3); // loaded: no further requests
+    await settle(RULES_RETRY_MS * 2 - 1); // the second wait is twice as long
+    expect(matrix).toHaveBeenCalledTimes(2);
+    await settle(1);
     expect(matrix).toHaveBeenCalledTimes(3);
+    expect(result.current.rules.map((rule) => rule.title)).toEqual(['Recovered']);
+    expect(result.current.loadError).toBeNull();
+
+    await settle(RULES_RETRY_MAX_MS * 2); // loaded: no further requests
+    expect(matrix).toHaveBeenCalledTimes(3);
+  });
+
+  it('keeps the previous rules and reports the failure when a reload fails', async () => {
+    vi.spyOn(api, 'matrix')
+      .mockResolvedValueOnce(response('Built-in'))
+      .mockRejectedValueOnce(new Error('HTTP 500'));
+    const { result, rerender } = render('CONNECTED', 0);
+    await settle();
+
+    rerender({ s: 'CONNECTED', r: 1 });
+    await settle();
+
+    expect(result.current.rules.map((rule) => rule.title)).toEqual(['Built-in']);
+    expect(result.current.loadError).toBe('HTTP 500');
+  });
+
+  it('caps the retry delay', () => {
+    expect([0, 1, 2, 3, 4, 10].map(retryDelay)).toEqual([3000, 6000, 12000, 24000, 30000, 30000]);
   });
 
   it('stops retrying after unmount', async () => {
@@ -83,7 +108,7 @@ describe('useRules', () => {
     await settle();
 
     unmount();
-    await settle(RULES_RETRY_MS * 3);
+    await settle(RULES_RETRY_MAX_MS * 3);
 
     expect(matrix).toHaveBeenCalledTimes(1);
   });

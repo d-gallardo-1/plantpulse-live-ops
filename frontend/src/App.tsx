@@ -12,7 +12,7 @@ import type { ViewId } from './types/telemetry';
 /** Application shell (orchestrator): one SSE subscription feeds every view. */
 export default function App() {
   const { snapshot, status } = usePlantStream();
-  const rules = useRules(status, snapshot?.matrix_revision ?? null);
+  const { rules, loadError } = useRules(status, snapshot?.matrix_revision ?? null);
   const latencyHistory = useLatencyHistory(snapshot);
   const [view, setView] = useState<ViewId>('live');
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
@@ -72,6 +72,7 @@ export default function App() {
                 stations={snapshot.stations}
                 activeCodes={activeCodes}
                 matrixSource={snapshot.matrix_source}
+                loadError={loadError}
               />
             )}
             {view === 'network' && (
