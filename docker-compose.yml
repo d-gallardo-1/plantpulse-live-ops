@@ -16,6 +16,8 @@ services:
     # The spreadsheet library writes temporary files while it builds a workbook,
     # so the read-only container still needs a writable, in-memory /tmp. It is
     # capped: without a size, a tmpfs may grow to half of the host's memory.
+    # 64 MB leaves room for two workbooks at the 25 MB expansion limit that
+    # uploads are held to; revisit it if that limit changes.
     tmpfs:
       - /tmp:size=64m
     cap_drop:
@@ -34,7 +36,8 @@ services:
     ports:
       - "127.0.0.1:8080:8080"
     read_only: true
-    # Nginx keeps its pid file and temporary request bodies here (capped).
+    # Nginx keeps its pid file and temporary request bodies here. Request
+    # bodies are limited to 3 MB (client_max_body_size), so 32 MB is ample.
     tmpfs:
       - /tmp:size=32m
     cap_drop:
