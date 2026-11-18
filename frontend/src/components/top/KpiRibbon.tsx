@@ -16,9 +16,9 @@ interface TileProps {
 function Tile({ label, icon: Icon, tone, children, note }: TileProps) {
   return (
     <div className="panel flex min-w-0 flex-col gap-1 px-3 py-2.5">
-      <div className="flex items-center gap-2">
+      <div className="flex items-start gap-2">
         <Icon aria-hidden="true" className={`h-4 w-4 shrink-0 ${TONE_CLASSES[tone].text}`} />
-        <span className="panel-title truncate">{label}</span>
+        <span className="panel-title leading-snug">{label}</span>
       </div>
       <div className="font-mono text-2xl font-semibold leading-tight text-slate-50">{children}</div>
       <div className="min-h-[18px] text-xs text-slate-400">{note}</div>

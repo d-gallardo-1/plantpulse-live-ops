@@ -38,6 +38,12 @@
     outline-offset: 2px;
   }
 
+  /* Scrollable strips (station map, history table) get a thin bar in the palette. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #334155 transparent;
+  }
+
   ::selection {
     background-color: rgb(6 182 212 / 0.3);
   }
