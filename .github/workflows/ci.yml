@@ -102,11 +102,9 @@ jobs:
       - name: Largest allowed upload, three at once, within the temp storage cap
         run: |
           # Generated inside the backend container, which has the spreadsheet library.
+          # The script checks its own size against the backend's upload limit and
+          # fails if it is over it or too far under it, so no size is repeated here.
           docker compose exec -T backend python - < scripts/make_large_workbook.py > big.xlsx
-          size="$(stat -c %s big.xlsx)"
-          echo "generated workbook: $size bytes"
-          test "$size" -gt 1800000
-          test "$size" -lt 2097152
           for n in 1 2 3; do
             curl --silent --show-error -X POST --data-binary @big.xlsx -H "Content-Type: application/octet-stream" -o "upload_$n.json" -w "%{http_code}" "$BASE_URL/api/v1/matrix/upload?filename=big_$n.xlsx" > "status_$n.txt" &
           done
